@@ -21,6 +21,8 @@
   <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
        on how to target different products -->
   <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.lang</depends>
+  <depends>com.intellij.modules.java</depends>
 
   <extensions defaultExtensionNs="com.intellij">
     <!-- Add your extensions here -->
@@ -30,7 +32,7 @@
   <actions>
     <!-- Add your actions here -->
 
-    <action id="GenerateMockTest"
+    <action id="GenerateMockTest" text="MockTest"
           class="com.lantingeee.ideaplugin.ShowMockTestDialogAction" description="Auto generate mock unit code tests">
       <keyboard-shortcut keymap="$default" first-keystroke="control alt G"/>
       <add-to-group group-id="JavaGenerateGroup1" anchor="last"/>

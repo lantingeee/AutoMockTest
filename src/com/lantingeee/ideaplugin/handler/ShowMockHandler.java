@@ -6,6 +6,7 @@ import com.intellij.codeInsight.generation.PsiElementClassMember;
 import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.ide.util.MemberChooser;
 import com.intellij.java.JavaBundle;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.diagnostic.Logger;
@@ -15,6 +16,7 @@ import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.util.PsiUtil;
+import com.lantingeee.ideaplugin.panel.ChooserHeaderPanel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.generate.tostring.GenerateToStringClassFilter;
@@ -50,7 +52,11 @@ public class ShowMockHandler implements CodeInsightActionHandler {
             if (context == null) {
                 return null;
             } else {
-                PsiClass clazz = (PsiClass) PsiTreeUtil.getParentOfType(context, PsiClass.class, false);
+
+                // 获取当前编辑的文件, 可以进而获取 PsiClass, PsiField 对象
+                // 获取Java类或者接口
+                PsiClass clazz = getTargetClass(editor, file);
+
                 if (clazz == null) {
                     return null;
                 } else {
@@ -70,6 +76,18 @@ public class ShowMockHandler implements CodeInsightActionHandler {
         }
     }
 
+    @Nullable
+    public static PsiClass getTargetClass(Editor editor, PsiFile file) {
+        int offset = editor.getCaretModel().getOffset();
+        PsiElement element = file.findElementAt(offset);
+        if (element == null) {
+            return null;
+        } else {
+            PsiClass target = PsiTreeUtil.getParentOfType(element, PsiClass.class);
+            return target instanceof SyntheticElement ? null : target;
+        }
+    }
+
     private static void doExecuteAction(@NotNull Project project, @NotNull final PsiClass clazz, Editor editor) {
 
         if (FileModificationService.getInstance().preparePsiElementsForWrite(new PsiElement[]{clazz})) {
@@ -79,7 +97,8 @@ public class ShowMockHandler implements CodeInsightActionHandler {
 //            }
 
             PsiElementClassMember[] dialogMembers = buildMembersToShow(clazz);
-            GenerateToStringActionHandlerImpl.MemberChooserHeaderPanel header = new GenerateToStringActionHandlerImpl.MemberChooserHeaderPanel(clazz);
+
+            ChooserHeaderPanel header = new ChooserHeaderPanel(clazz);
             logger.debug("Displaying member chooser dialog");
 
             MemberChooser<PsiElementClassMember> chooser = new MemberChooser<PsiElementClassMember>(dialogMembers, true, true, project, PsiUtil.isLanguageLevel5OrHigher(clazz), header) {
