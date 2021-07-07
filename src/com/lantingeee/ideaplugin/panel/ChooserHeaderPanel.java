@@ -42,7 +42,7 @@ public class ChooserHeaderPanel extends JPanel {
     public ChooserHeaderPanel(final PsiClass clazz) {
         super(new GridBagLayout());
         Collection<TemplateResource> templates = ToStringTemplatesManager.getInstance().getAllTemplates();
-        TemplateResource[] all = (TemplateResource[])templates.toArray(new TemplateResource[0]);
+        TemplateResource[] all = (TemplateResource[]) templates.toArray(new TemplateResource[0]);
         JButton settingsButton = new JButton(JavaBundle.message("button.text.settings", new Object[0]));
         settingsButton.setMnemonic(83);
         this.comboBox = new ComboBox(all);
@@ -87,8 +87,8 @@ public class ChooserHeaderPanel extends JPanel {
                         ChooserHeaderPanel.this.comboBox.removeAllItems();
                         Iterator var1 = ToStringTemplatesManager.getInstance().getAllTemplates().iterator();
 
-                        while(var1.hasNext()) {
-                            TemplateResource resource = (TemplateResource)var1.next();
+                        while (var1.hasNext()) {
+                            TemplateResource resource = (TemplateResource) var1.next();
                             ChooserHeaderPanel.this.comboBox.addItem(resource);
                         }
 
@@ -101,24 +101,27 @@ public class ChooserHeaderPanel extends JPanel {
                 composite.disposeUIResources();
             }
         });
-        this.comboBox.setSelectedItem(ToStringTemplatesManager.getInstance().getDefaultTemplate());
-        JLabel templatesLabel = new JLabel(JavaBundle.message("generate.tostring.template.label", new Object[0]));
-        templatesLabel.setDisplayedMnemonic('T');
-        templatesLabel.setLabelFor(this.comboBox);
-        GridBagConstraints constraints = new GridBagConstraints();
-        constraints.anchor = 256;
-        constraints.gridx = 0;
-        this.add(templatesLabel, constraints);
-        constraints.gridx = 1;
-        constraints.weightx = 1.0D;
-        constraints.fill = 2;
-        this.add(this.comboBox, constraints);
-        constraints.gridx = 2;
-        constraints.weightx = 0.0D;
-        this.add(settingsButton, constraints);
+
+        // todo: 之后可以扩展各种模板
+//        this.comboBox.setSelectedItem(ToStringTemplatesManager.getInstance().getDefaultTemplate());
+
+//        JLabel templatesLabel = new JLabel(JavaBundle.message("generate.tostring.template.label", new Object[0]));
+//        templatesLabel.setDisplayedMnemonic('T');
+//        templatesLabel.setLabelFor(this.comboBox);
+//        GridBagConstraints constraints = new GridBagConstraints();
+//        constraints.anchor = 256;
+//        constraints.gridx = 0;
+//        this.add(templatesLabel, constraints);
+//        constraints.gridx = 1;
+//        constraints.weightx = 1.0D;
+//        constraints.fill = 2;
+//        this.add(this.comboBox, constraints);
+//        constraints.gridx = 2;
+//        constraints.weightx = 0.0D;
+//        this.add(settingsButton, constraints);
     }
 
     public TemplateResource getSelectedTemplate() {
-        return (TemplateResource)this.comboBox.getSelectedItem();
+        return (TemplateResource) this.comboBox.getSelectedItem();
     }
 }

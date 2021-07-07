@@ -3,31 +3,24 @@ package com.lantingeee.ideaplugin.handler;
 import com.intellij.codeInsight.CodeInsightActionHandler;
 import com.intellij.codeInsight.FileModificationService;
 import com.intellij.codeInsight.generation.PsiElementClassMember;
-import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.ide.util.MemberChooser;
-import com.intellij.java.JavaBundle;
-import com.intellij.openapi.actionSystem.CommonDataKeys;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.psi.util.PsiUtil;
 import com.lantingeee.ideaplugin.panel.ChooserHeaderPanel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.generate.tostring.GenerateToStringClassFilter;
-import org.jetbrains.java.generate.*;
+import org.jetbrains.java.generate.GenerateToStringContext;
+import org.jetbrains.java.generate.GenerateToStringUtils;
+import org.jetbrains.java.generate.GenerationUtil;
 import org.jetbrains.java.generate.config.Config;
-import org.jetbrains.java.generate.config.ConflictResolutionPolicy;
-import org.jetbrains.java.generate.template.TemplateResource;
-import org.jetbrains.java.generate.template.toString.ToStringTemplatesManager;
 
 import java.util.Arrays;
-import java.util.Collection;
 
 public class ShowMockHandler implements CodeInsightActionHandler {
     private static final Logger logger = Logger.getInstance("#ShowMockHandler");
@@ -91,17 +84,12 @@ public class ShowMockHandler implements CodeInsightActionHandler {
     private static void doExecuteAction(@NotNull Project project, @NotNull final PsiClass clazz, Editor editor) {
 
         if (FileModificationService.getInstance().preparePsiElementsForWrite(new PsiElement[]{clazz})) {
-//            logger.debug("+++ doExecuteAction - START +++");
-//            if (logger.isDebugEnabled()) {
-//                logger.debug("Current project " + project.getName());
-//            }
 
-            PsiElementClassMember[] dialogMembers = buildMembersToShow(clazz);
-
+            PsiElementClassMember[] filedElement = buildMembersToShow(clazz, "Filed");
             ChooserHeaderPanel header = new ChooserHeaderPanel(clazz);
             logger.debug("Displaying member chooser dialog");
 
-            MemberChooser<PsiElementClassMember> chooser = new MemberChooser<PsiElementClassMember>(dialogMembers, true, true, project, PsiUtil.isLanguageLevel5OrHigher(clazz), header) {
+            MemberChooser<PsiElementClassMember> chooser = new MemberChooser<PsiElementClassMember>(filedElement, true, true, project, false, header) {
                 @Nullable
                 protected String getHelpId() {
                     return "editing.altInsert.tostring";
@@ -111,9 +99,10 @@ public class ShowMockHandler implements CodeInsightActionHandler {
                     return JavaCodeStyleSettings.getInstance(clazz.getContainingFile()).INSERT_OVERRIDE_ANNOTATION;
                 }
             };
-            chooser.setTitle("Select Methods");
+            chooser.setTitle("Select Auto Mock Elements");
             chooser.setCopyJavadocVisible(false);
-            chooser.selectElements(getPreselection(clazz, dialogMembers));
+            chooser.selectElements(getPreselection(clazz, filedElement));
+
             header.setChooser(chooser);
             if (ApplicationManager.getApplication().isUnitTestMode()) {
                 chooser.close(0);
@@ -141,7 +130,7 @@ public class ShowMockHandler implements CodeInsightActionHandler {
 //                }
 //            }
 
-//            logger.debug("+++ doExecuteAction - END +++");
+            logger.debug("+++ doExecuteAction - END +++");
         }
     }
     private static PsiElementClassMember[] getPreselection(@NotNull PsiClass clazz, PsiElementClassMember[] dialogMembers) {
@@ -157,24 +146,19 @@ public class ShowMockHandler implements CodeInsightActionHandler {
     }
 
 
-    public static PsiElementClassMember[] buildMembersToShow(PsiClass clazz) {
+    public static PsiElementClassMember[] buildMembersToShow(PsiClass clazz, String type) {
         Config config = GenerateToStringContext.getConfig();
         PsiField[] filteredFields = GenerateToStringUtils.filterAvailableFields(clazz, true, config.getFilterPattern());
-//        if (logger.isDebugEnabled()) {
-//            logger.debug("Number of fields after filtering: " + filteredFields.length);
-//        }
 
         PsiMethod[] filteredMethods;
-        if (config.enableMethods) {
+        // 仅选择 filed 属性列表
+        if ("Filed".equalsIgnoreCase(type)) {
+            return GenerationUtil.combineToClassMemberList(filteredFields, PsiMethod.EMPTY_ARRAY);
+        } else if ("Method".equalsIgnoreCase(type)) {
             filteredMethods = GenerateToStringUtils.filterAvailableMethods(clazz, config.getFilterPattern());
-//            if (logger.isDebugEnabled()) {
-//                logger.debug("Number of methods after filtering: " + filteredMethods.length);
-//            }
-        } else {
-            filteredMethods = PsiMethod.EMPTY_ARRAY;
+            return GenerationUtil.combineToClassMemberList(PsiField.EMPTY_ARRAY, filteredMethods);
         }
-
-        return GenerationUtil.combineToClassMemberList(filteredFields, filteredMethods);
+        return GenerationUtil.combineToClassMemberList(PsiField.EMPTY_ARRAY, PsiMethod.EMPTY_ARRAY);
     }
 
 }
