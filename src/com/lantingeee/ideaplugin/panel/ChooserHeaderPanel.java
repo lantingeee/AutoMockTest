@@ -32,11 +32,17 @@ import java.util.List;
 public class ChooserHeaderPanel extends JPanel {
     
     private MemberChooser<PsiElementClassMember> chooser;
+
+    private MemberChooser<PsiElementClassMember> methodChooser;
     
     private final JComboBox<TemplateResource> comboBox;
 
     public void setChooser(MemberChooser chooser) {
         this.chooser = chooser;
+    }
+
+    public void setMethodChooser(MemberChooser methodChooser) {
+        this.methodChooser = chooser;
     }
 
     public ChooserHeaderPanel(final PsiClass clazz) {
@@ -74,7 +80,7 @@ public class ChooserHeaderPanel extends JPanel {
                     }
 
                     public String getDisplayName() {
-                        return JavaBundle.message("generate.tostring.tab.title", new Object[0]);
+                        return "generate.PowerMockTest";
                     }
 
                     public String getHelpTopic() {
@@ -101,6 +107,53 @@ public class ChooserHeaderPanel extends JPanel {
                 composite.disposeUIResources();
             }
         });
+
+
+        settingsButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                final TemplatesPanel ui = new TemplatesPanel(clazz.getProject());
+                Configurable composite = new TabbedConfigurable() {
+                    @NotNull
+                    protected java.util.List<Configurable> createConfigurables() {
+                        List<Configurable> res = new ArrayList();
+                        res.add(new GenerateToStringConfigurable(clazz.getProject()));
+                        res.add(ui);
+                        if (res == null) {
+//                            $$$reportNull$$$0(0);
+                        }
+
+                        return res;
+                    }
+
+                    public String getDisplayName() {
+                        return "generate.PowerMockTest";
+                    }
+
+                    public String getHelpTopic() {
+                        return "editing.altInsert.tostring.settings";
+                    }
+
+                    public void apply() throws ConfigurationException {
+                        super.apply();
+                        GenerateToStringActionHandlerImpl.updateDialog(clazz, ChooserHeaderPanel.this.methodChooser);
+                        ChooserHeaderPanel.this.comboBox.removeAllItems();
+                        Iterator var1 = ToStringTemplatesManager.getInstance().getAllTemplates().iterator();
+
+                        while (var1.hasNext()) {
+                            TemplateResource resource = (TemplateResource) var1.next();
+                            ChooserHeaderPanel.this.comboBox.addItem(resource);
+                        }
+                        ChooserHeaderPanel.this.comboBox.setSelectedItem(ToStringTemplatesManager.getInstance().getDefaultTemplate());
+                    }
+                };
+                ShowSettingsUtil.getInstance().editConfigurable(ChooserHeaderPanel.this, composite, () -> {
+                    ui.selectItem(ToStringTemplatesManager.getInstance().getDefaultTemplate());
+                });
+                composite.disposeUIResources();
+            }
+        });
+
+
 
         // todo: 之后可以扩展各种模板
 //        this.comboBox.setSelectedItem(ToStringTemplatesManager.getInstance().getDefaultTemplate());

@@ -3,27 +3,38 @@ package com.lantingeee.ideaplugin.handler;
 import com.intellij.codeInsight.CodeInsightActionHandler;
 import com.intellij.codeInsight.FileModificationService;
 import com.intellij.codeInsight.generation.PsiElementClassMember;
+import com.intellij.codeInsight.hint.HintManager;
 import com.intellij.ide.util.MemberChooser;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.JavaCodeStyleSettings;
 import com.intellij.psi.util.PsiTreeUtil;
+import com.lantingeee.ideaplugin.model.ClassModel;
 import com.lantingeee.ideaplugin.panel.ChooserHeaderPanel;
+import com.lantingeee.ideaplugin.process.MethodProcessor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.generate.tostring.GenerateToStringClassFilter;
 import org.jetbrains.java.generate.GenerateToStringContext;
 import org.jetbrains.java.generate.GenerateToStringUtils;
+import org.jetbrains.java.generate.GenerateToStringWorker;
 import org.jetbrains.java.generate.GenerationUtil;
 import org.jetbrains.java.generate.config.Config;
+import org.jetbrains.java.generate.config.ConflictResolutionPolicy;
+import org.jetbrains.java.generate.template.TemplateResource;
+import org.jetbrains.java.generate.template.toString.ToStringTemplatesManager;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 public class ShowMockHandler implements CodeInsightActionHandler {
     private static final Logger logger = Logger.getInstance("#ShowMockHandler");
+
+    private ClassModel classModel;
 
     @Override
     public void invoke(@NotNull Project project, @NotNull Editor editor, @NotNull PsiFile psiFile) {
@@ -90,18 +101,16 @@ public class ShowMockHandler implements CodeInsightActionHandler {
             logger.debug("Displaying member chooser dialog");
 
             MemberChooser<PsiElementClassMember> chooser = new MemberChooser<PsiElementClassMember>(filedElement, true, true, project, false, header) {
-                @Nullable
-                protected String getHelpId() {
-                    return "editing.altInsert.tostring";
-                }
-
-                protected boolean isInsertOverrideAnnotationSelected() {
-                    return JavaCodeStyleSettings.getInstance(clazz.getContainingFile()).INSERT_OVERRIDE_ANNOTATION;
-                }
             };
             chooser.setTitle("Select Auto Mock Elements");
             chooser.setCopyJavadocVisible(false);
             chooser.selectElements(getPreselection(clazz, filedElement));
+
+            PsiElementClassMember[] methods = buildMembersToShow(clazz, "Method");
+
+            MemberChooser<PsiElementClassMember> memberChooser = new MemberChooser<PsiElementClassMember>(methods, true, true, project, false, header) {
+            };
+            header.setMethodChooser(memberChooser);
 
             header.setChooser(chooser);
             if (ApplicationManager.getApplication().isUnitTestMode()) {
@@ -109,34 +118,38 @@ public class ShowMockHandler implements CodeInsightActionHandler {
             } else {
                 chooser.show();
             }
-
-//            if (0 == chooser.getExitCode()) {
-//                Collection<PsiMember> selectedMembers = GenerationUtil.convertClassMembersToPsiMembers(chooser.getSelectedElements());
-//                TemplateResource template = header.getSelectedTemplate();
-//                ToStringTemplatesManager.getInstance().setDefaultTemplate(template);
-//                if (template.isValidTemplate()) {
-//                    GenerateToStringWorker worker = new GenerateToStringWorker(clazz, editor, chooser.isInsertOverrideAnnotation());
-//                    ConflictResolutionPolicy resolutionPolicy = worker.exitsMethodDialog(template);
-//
-//                    try {
-//                        WriteCommandAction.runWriteCommandAction(project, "Generate toString()", (String)null, () -> {
-//                            worker.execute(selectedMembers, template, resolutionPolicy);
-//                        }, new PsiFile[0]);
-//                    } catch (Exception var11) {
-//                        GenerationUtil.handleException(project, var11);
-//                    }
-//                } else {
-//                    HintManager.getInstance().showErrorHint(editor, "toString() template '" + template.getFileName() + "' is invalid");
-//                }
-//            }
-
-            logger.debug("+++ doExecuteAction - END +++");
+            if (0 == chooser.getExitCode()) {
+                memberChooser.show();
+            }
         }
     }
-    private static PsiElementClassMember[] getPreselection(@NotNull PsiClass clazz, PsiElementClassMember[] dialogMembers) {
-//        if (clazz == null) {
-//            $$$reportNull$$$0(5);
+
+    private static void getPreSelectMethod(@NotNull final PsiClass clazz) {
+
+    }
+
+    private static void run() {
+//        Collection<PsiMember> selectedMembers = GenerationUtil.convertClassMembersToPsiMembers(chooser.getSelectedElements());
+//        TemplateResource template = header.getSelectedTemplate();
+//        ToStringTemplatesManager.getInstance().setDefaultTemplate(template);
+//        if (template.isValidTemplate()) {
+//            GenerateToStringWorker worker = new GenerateToStringWorker(clazz, editor, chooser.isInsertOverrideAnnotation());
+//            ConflictResolutionPolicy resolutionPolicy = worker.exitsMethodDialog(template);
+//
+//            try {
+//                WriteCommandAction.runWriteCommandAction(project, "Generate toString()", (String)null, () -> {
+//                    worker.execute(selectedMembers, template, resolutionPolicy);
+//                }, new PsiFile[0]);
+//            } catch (Exception var11) {
+//                GenerationUtil.handleException(project, var11);
+//            }
+//        } else {
+//            HintManager.getInstance().showErrorHint(editor, "toString() template '" + template.getFileName() + "' is invalid");
 //        }
+    }
+
+
+    private static PsiElementClassMember[] getPreselection(@NotNull PsiClass clazz, PsiElementClassMember[] dialogMembers) {
 
         return (PsiElementClassMember[]) Arrays.stream(dialogMembers).filter((member) -> {
             return member.getElement().getContainingClass() == clazz;
@@ -155,7 +168,7 @@ public class ShowMockHandler implements CodeInsightActionHandler {
         if ("Filed".equalsIgnoreCase(type)) {
             return GenerationUtil.combineToClassMemberList(filteredFields, PsiMethod.EMPTY_ARRAY);
         } else if ("Method".equalsIgnoreCase(type)) {
-            filteredMethods = GenerateToStringUtils.filterAvailableMethods(clazz, config.getFilterPattern());
+            filteredMethods = MethodProcessor.filterAvailableMethods(clazz, config.getFilterPattern());
             return GenerationUtil.combineToClassMemberList(PsiField.EMPTY_ARRAY, filteredMethods);
         }
         return GenerationUtil.combineToClassMemberList(PsiField.EMPTY_ARRAY, PsiMethod.EMPTY_ARRAY);
